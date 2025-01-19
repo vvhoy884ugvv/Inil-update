@@ -1,0 +1,154 @@
+-- مكتبة INIL المتطورة
+local INIL = {}
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- الوظائف الأساسية
+INIL.Components = {}
+INIL.State = {}
+INIL.Settings = {
+    Theme = "Dark", -- الوضع الافتراضي
+    Language = "en" -- اللغة الافتراضية
+}
+
+-- [1] إنشاء نافذة أساسية
+function INIL:CreateWindow(options)
+    local gui = Instance.new("ScreenGui", game.CoreGui)
+    gui.Name = options.Name or "INIL_UI"
+
+    local window = Instance.new("Frame", gui)
+    window.Name = "MainWindow"
+    window.Size = UDim2.new(0, options.Width or 300, 0, options.Height or 500)
+    window.Position = UDim2.new(0.5, 0, 0.5, 0)
+    window.AnchorPoint = Vector2.new(0.5, 0.5)
+    window.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(30, 30, 30)
+    window.BackgroundTransparency = 0
+
+    local corner = Instance.new("UICorner", window)
+    corner.CornerRadius = UDim.new(0, 12)
+
+    -- شريط العنوان
+    local titleBar = Instance.new("Frame", window)
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
+    titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+
+    local title = Instance.new("TextLabel", titleBar)
+    title.Text = options.Title or "INIL Window"
+    title.Size = UDim2.new(1, -40, 1, 0)
+    title.Position = UDim2.new(0, 10, 0, 0)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 16
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.BackgroundTransparency = 1
+    title.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- زر الإغلاق
+    local closeButton = Instance.new("TextButton", titleBar)
+    closeButton.Text = "X"
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextSize = 16
+    closeButton.TextColor3 = Color3.fromRGB(255, 85, 85)
+    closeButton.Size = UDim2.new(0, 40, 1, 0)
+    closeButton.Position = UDim2.new(1, -40, 0, 0)
+    closeButton.BackgroundTransparency = 1
+    closeButton.MouseButton1Click:Connect(function()
+        gui:Destroy()
+    end)
+
+    self:EnableDrag(window, titleBar)
+    return window
+end
+
+-- [2] نظام السحب
+function INIL:EnableDrag(frame, dragHandle)
+    local dragging, dragStart, startPos
+
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+-- [3] إضافة زر
+function INIL:CreateButton(parent, options, callback)
+    local button = Instance.new("TextButton", parent)
+    button.Text = options.Text or "Button"
+    button.Size = options.Size or UDim2.new(0, 100, 0, 40)
+    button.Position = options.Position or UDim2.new(0, 0, 0, 0)
+    button.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(50, 50, 50)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 14
+
+    local corner = Instance.new("UICorner", button)
+    corner.CornerRadius = UDim.new(0, 8)
+
+    button.MouseButton1Click:Connect(function()
+        if callback then
+            callback()
+        end
+    end)
+
+    return button
+end
+
+-- [4] إشعار متقدم
+function INIL:CreateNotification(parent, options)
+    local notification = Instance.new("Frame", parent)
+    notification.Size = UDim2.new(0, options.Width or 300, 0, options.Height or 50)
+    notification.Position = UDim2.new(0.5, 0, 0.1, 0)
+    notification.AnchorPoint = Vector2.new(0.5, 0)
+    notification.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(70, 70, 70)
+
+    local corner = Instance.new("UICorner", notification)
+    corner.CornerRadius = UDim.new(0, 8)
+
+    local label = Instance.new("TextLabel", notification)
+    label.Text = options.Text or "Notification"
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+
+    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        Position = UDim2.new(0.5, 0, 0.2, 0)
+    }):Play()
+
+    task.wait(options.Duration or 3)
+
+    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        Position = UDim2.new(0.5, 0, -0.2, 0)
+    }):Play()
+
+    task.wait(0.5)
+    notification:Destroy()
+end
+
+return INIL
