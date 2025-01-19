@@ -1,154 +1,136 @@
--- مكتبة INIL المتطورة
+-- INIL Library: Advanced UI System
 local INIL = {}
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
 
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-
--- الوظائف الأساسية
-INIL.Components = {}
-INIL.State = {}
-INIL.Settings = {
-    Theme = "Dark", -- الوضع الافتراضي
-    Language = "en" -- اللغة الافتراضية
+-- مكتبة الألوان
+local Colors = {
+    Background = Color3.fromRGB(50, 50, 50),
+    Primary = Color3.fromRGB(30, 144, 255),
+    Success = Color3.fromRGB(34, 177, 76),
+    Danger = Color3.fromRGB(255, 0, 0),
+    Warning = Color3.fromRGB(255, 165, 0),
+    Text = Color3.fromRGB(255, 255, 255)
 }
 
--- [1] إنشاء نافذة أساسية
-function INIL:CreateWindow(options)
-    local gui = Instance.new("ScreenGui", game.CoreGui)
-    gui.Name = options.Name or "INIL_UI"
+-- وظائف المساعدة
+local function CreateTween(object, properties, duration)
+    local tween = TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties)
+    tween:Play()
+    return tween
+end
 
-    local window = Instance.new("Frame", gui)
-    window.Name = "MainWindow"
-    window.Size = UDim2.new(0, options.Width or 300, 0, options.Height or 500)
-    window.Position = UDim2.new(0.5, 0, 0.5, 0)
-    window.AnchorPoint = Vector2.new(0.5, 0.5)
-    window.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(30, 30, 30)
-    window.BackgroundTransparency = 0
+local function CreateShadow(parent)
+    local Shadow = Instance.new("ImageLabel")
+    Shadow.Name = "Shadow"
+    Shadow.Parent = parent
+    Shadow.BackgroundTransparency = 1
+    Shadow.Image = "rbxassetid://1316045217"
+    Shadow.ImageColor3 = Color3.new(0, 0, 0)
+    Shadow.ImageTransparency = 0.8
+    Shadow.Size = UDim2.new(1, 12, 1, 12)
+    Shadow.Position = UDim2.new(0, -6, 0, -6)
+    Shadow.ScaleType = Enum.ScaleType.Slice
+    Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    return Shadow
+end
 
-    local corner = Instance.new("UICorner", window)
-    corner.CornerRadius = UDim.new(0, 12)
+-- نافذة رئيسية
+function INIL:CreateMainWindow(title)
+    local ScreenGui = Instance.new("ScreenGui")
+    local MainFrame = Instance.new("Frame")
+    local TitleBar = Instance.new("Frame")
+    local TitleLabel = Instance.new("TextLabel")
+    local ContentFrame = Instance.new("Frame")
+    local CloseButton = Instance.new("TextButton")
+    local Sections = {}
+
+    -- إعداد النافذة
+    ScreenGui.Name = "INIL_UI"
+    ScreenGui.Parent = game.CoreGui
+
+    MainFrame.Name = "MainFrame"
+    MainFrame.Parent = ScreenGui
+    MainFrame.BackgroundColor3 = Colors.Background
+    MainFrame.Size = UDim2.new(0.6, 0, 0.8, 0)
+    MainFrame.Position = UDim2.new(0.2, 0, 0.1, 0)
+    MainFrame.ClipsDescendants = true
+    CreateShadow(MainFrame)
 
     -- شريط العنوان
-    local titleBar = Instance.new("Frame", window)
-    titleBar.Size = UDim2.new(1, 0, 0, 40)
-    titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    TitleBar.Name = "TitleBar"
+    TitleBar.Parent = MainFrame
+    TitleBar.BackgroundColor3 = Colors.Primary
+    TitleBar.Size = UDim2.new(1, 0, 0.1, 0)
 
-    local title = Instance.new("TextLabel", titleBar)
-    title.Text = options.Title or "INIL Window"
-    title.Size = UDim2.new(1, -40, 1, 0)
-    title.Position = UDim2.new(0, 10, 0, 0)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 16
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.BackgroundTransparency = 1
-    title.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Name = "TitleLabel"
+    TitleLabel.Parent = TitleBar
+    TitleLabel.Text = title or "INIL UI"
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextColor3 = Colors.Text
+    TitleLabel.TextSize = 20
+    TitleLabel.Size = UDim2.new(1, -50, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
 
-    -- زر الإغلاق
-    local closeButton = Instance.new("TextButton", titleBar)
-    closeButton.Text = "X"
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.TextSize = 16
-    closeButton.TextColor3 = Color3.fromRGB(255, 85, 85)
-    closeButton.Size = UDim2.new(0, 40, 1, 0)
-    closeButton.Position = UDim2.new(1, -40, 0, 0)
-    closeButton.BackgroundTransparency = 1
-    closeButton.MouseButton1Click:Connect(function()
-        gui:Destroy()
+    CloseButton.Name = "CloseButton"
+    CloseButton.Parent = TitleBar
+    CloseButton.Text = "X"
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.TextColor3 = Colors.Text
+    CloseButton.TextSize = 20
+    CloseButton.BackgroundColor3 = Colors.Danger
+    CloseButton.Size = UDim2.new(0, 40, 1, 0)
+    CloseButton.Position = UDim2.new(1, -40, 0, 0)
+
+    ContentFrame.Name = "ContentFrame"
+    ContentFrame.Parent = MainFrame
+    ContentFrame.BackgroundColor3 = Colors.Background
+    ContentFrame.Size = UDim2.new(1, 0, 0.9, 0)
+    ContentFrame.Position = UDim2.new(0, 0, 0.1, 0)
+
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
     end)
 
-    self:EnableDrag(window, titleBar)
-    return window
+    -- إضافة أقسام
+    function INIL:AddSection(name)
+        local SectionFrame = Instance.new("Frame")
+        local SectionLabel = Instance.new("TextLabel")
+        local SectionContent = Instance.new("Frame")
+
+        SectionFrame.Name = name
+        SectionFrame.Parent = ContentFrame
+        SectionFrame.BackgroundColor3 = Colors.Primary
+        SectionFrame.Size = UDim2.new(1, 0, 0, 50)
+        SectionFrame.LayoutOrder = #Sections + 1
+
+        SectionLabel.Name = "SectionLabel"
+        SectionLabel.Parent = SectionFrame
+        SectionLabel.Text = name or "Section"
+        SectionLabel.Font = Enum.Font.Gotham
+        SectionLabel.TextColor3 = Colors.Text
+        SectionLabel.TextSize = 16
+        SectionLabel.Size = UDim2.new(1, 0, 1, 0)
+
+        SectionContent.Name = name .. "_Content"
+        SectionContent.Parent = SectionFrame
+        SectionContent.BackgroundColor3 = Colors.Background
+        SectionContent.Size = UDim2.new(1, 0, 5, 0)
+        SectionContent.ClipsDescendants = true
+
+        table.insert(Sections, SectionFrame)
+        return SectionContent
+    end
+
+    return INIL
 end
 
--- [2] نظام السحب
-function INIL:EnableDrag(frame, dragHandle)
-    local dragging, dragStart, startPos
-
-    dragHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-end
-
--- [3] إضافة زر
-function INIL:CreateButton(parent, options, callback)
-    local button = Instance.new("TextButton", parent)
-    button.Text = options.Text or "Button"
-    button.Size = options.Size or UDim2.new(0, 100, 0, 40)
-    button.Position = options.Position or UDim2.new(0, 0, 0, 0)
-    button.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(50, 50, 50)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 14
-
-    local corner = Instance.new("UICorner", button)
-    corner.CornerRadius = UDim.new(0, 8)
-
-    button.MouseButton1Click:Connect(function()
-        if callback then
-            callback()
-        end
-    end)
-
-    return button
-end
-
--- [4] إشعار متقدم
-function INIL:CreateNotification(parent, options)
-    local notification = Instance.new("Frame", parent)
-    notification.Size = UDim2.new(0, options.Width or 300, 0, options.Height or 50)
-    notification.Position = UDim2.new(0.5, 0, 0.1, 0)
-    notification.AnchorPoint = Vector2.new(0.5, 0)
-    notification.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(70, 70, 70)
-
-    local corner = Instance.new("UICorner", notification)
-    corner.CornerRadius = UDim.new(0, 8)
-
-    local label = Instance.new("TextLabel", notification)
-    label.Text = options.Text or "Notification"
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-
-    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-        Position = UDim2.new(0.5, 0, 0.2, 0)
-    }):Play()
-
-    task.wait(options.Duration or 3)
-
-    TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-        Position = UDim2.new(0.5, 0, -0.2, 0)
-    }):Play()
-
-    task.wait(0.5)
-    notification:Destroy()
-end
+-- مثال على استخدام المكتبة
+local myUI = INIL:CreateMainWindow("INIL Advanced UI")
+local section = myUI:AddSection("Tasks")
+local newSection = myUI:AddSection("Settings")
 
 return INIL
